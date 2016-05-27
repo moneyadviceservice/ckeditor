@@ -3,10 +3,8 @@ require 'active_support/json/encoding'
 
 module Ckeditor
   module Utils
-    class JavascriptCode < String
-      def as_json(options = nil) self end #:nodoc:
-      def encode_json(encoder) self end #:nodoc:
-    end
+    autoload :JavascriptCode, 'ckeditor/utils/javascript_code'
+    autoload :ContentTypeDetector, 'ckeditor/utils/content_type_detector'
 
     class << self
       def escape_single_quotes(str)
@@ -27,9 +25,9 @@ module Ckeditor
 
         if options && !options.keys.empty?
           js_options = ActiveSupport::JSON.encode(options)
-          js << "CKEDITOR.replace('#{dom_id}', #{js_options});"
+          js << "if (CKEDITOR.instances['#{dom_id}'] == undefined) { CKEDITOR.replace('#{dom_id}', #{js_options}); }"
         else
-          js << "CKEDITOR.replace('#{dom_id}');"
+          js << "if (CKEDITOR.instances['#{dom_id}'] == undefined) { CKEDITOR.replace('#{dom_id}'); }"
         end
 
         js << "} else { setTimeout(arguments.callee, 50); } })();"
@@ -72,7 +70,7 @@ module Ckeditor
       def select_assets(path, relative_path)
         relative_folder = Ckeditor.root_path.join(relative_path)
         folder = relative_folder.join(path)
-        extensions = '*.{js,css,png,gif,jpg}'
+        extensions = '*.{js,css,png,gif,jpg,html}'
         languages = (Ckeditor.assets_languages || [])
 
         # Files at root
@@ -94,7 +92,7 @@ module Ckeditor
           files += Dir[path.join('**', extensions)]
         end
 
-        files.inject([]) do |items, name| 
+        files.inject([]) do |items, name|
           file = Pathname.new(name)
           base = file.basename('.*').to_s
 
